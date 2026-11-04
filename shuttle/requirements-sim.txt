@@ -1,0 +1,2 @@
+# PC-weergave; niet installeren op de ESP32.
+PyQt6==6.12.0
