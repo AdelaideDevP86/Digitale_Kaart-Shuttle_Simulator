@@ -1,0 +1,1004 @@
+{
+  "versie": "foto-v1-logisch",
+  "profiel": "logisch",
+  "depot": "D00",
+  "start_edge": "E01",
+  "depot_herkenning": {
+    "methode": null,
+    "gevalideerd": false
+  },
+  "knopen": [
+    {
+      "id": "D00",
+      "soort": "depot",
+      "x": 65,
+      "y": 72,
+      "naam": "Treindepot",
+      "poorten": "E"
+    },
+    {
+      "id": "J01",
+      "soort": "keuze",
+      "x": 141,
+      "y": 72,
+      "naam": "Depot-aansluiting",
+      "poorten": "WES"
+    },
+    {
+      "id": "J02",
+      "soort": "keuze",
+      "x": 174,
+      "y": 72,
+      "naam": "Reuzenrad-lus west",
+      "poorten": "WEN"
+    },
+    {
+      "id": "J03",
+      "soort": "keuze",
+      "x": 228,
+      "y": 72,
+      "naam": "Reuzenrad-stam",
+      "poorten": "WEN"
+    },
+    {
+      "id": "J04",
+      "soort": "keuze",
+      "x": 260,
+      "y": 72,
+      "naam": "Buitenbocht-keuze",
+      "poorten": "WEN"
+    },
+    {
+      "id": "J05",
+      "soort": "keuze",
+      "x": 335,
+      "y": 118,
+      "naam": "Achtbaan / rechterrand",
+      "poorten": "NES"
+    },
+    {
+      "id": "J06",
+      "soort": "keuze",
+      "x": 335,
+      "y": 177,
+      "naam": "Vrijeval-zijpad",
+      "poorten": "NSW"
+    },
+    {
+      "id": "J07",
+      "soort": "keuze",
+      "x": 292,
+      "y": 207,
+      "naam": "Vrijeval / onderrand",
+      "poorten": "WEN"
+    },
+    {
+      "id": "J08",
+      "soort": "keuze",
+      "x": 246,
+      "y": 207,
+      "naam": "Wildwater-zijpad / onderrand",
+      "poorten": "WEN"
+    },
+    {
+      "id": "J09",
+      "soort": "keuze",
+      "x": 205,
+      "y": 207,
+      "naam": "Wildwater-stam / onderrand",
+      "poorten": "WEN"
+    },
+    {
+      "id": "J10",
+      "soort": "keuze",
+      "x": 141,
+      "y": 148,
+      "naam": "Arcade-teruglus",
+      "poorten": "NSE"
+    },
+    {
+      "id": "J11",
+      "soort": "keuze",
+      "x": 141,
+      "y": 106,
+      "naam": "Arcade-inrit",
+      "poorten": "NSE"
+    },
+    {
+      "id": "J12",
+      "soort": "keuze",
+      "x": 172,
+      "y": 106,
+      "naam": "Arcade-T",
+      "poorten": "WES"
+    },
+    {
+      "id": "J13",
+      "soort": "keuze",
+      "x": 205,
+      "y": 175,
+      "naam": "Wildwater-T",
+      "poorten": "NSE"
+    },
+    {
+      "id": "J14",
+      "soort": "keuze",
+      "x": 292,
+      "y": 177,
+      "naam": "Vrijeval-T",
+      "poorten": "NSE"
+    },
+    {
+      "id": "J15",
+      "soort": "keuze",
+      "x": 371,
+      "y": 118,
+      "naam": "Achtbaan-T",
+      "poorten": "NEW"
+    },
+    {
+      "id": "J16",
+      "soort": "keuze",
+      "x": 228,
+      "y": 42,
+      "naam": "Reuzenrad-T",
+      "poorten": "NSW"
+    },
+    {
+      "id": "C01",
+      "soort": "hoek",
+      "x": 174,
+      "y": 42,
+      "naam": "Hoek Reuzenrad-lus",
+      "poorten": "SE"
+    },
+    {
+      "id": "C02",
+      "soort": "hoek",
+      "x": 335,
+      "y": 207,
+      "naam": "Hoek rechtsonder",
+      "poorten": "NW"
+    },
+    {
+      "id": "C03",
+      "soort": "hoek",
+      "x": 141,
+      "y": 207,
+      "naam": "Hoek linksonder",
+      "poorten": "NE"
+    },
+    {
+      "id": "C04",
+      "soort": "hoek",
+      "x": 246,
+      "y": 175,
+      "naam": "Hoek Wildwater-zijpad",
+      "poorten": "SW"
+    },
+    {
+      "id": "C05",
+      "soort": "hoek",
+      "x": 172,
+      "y": 148,
+      "naam": "Hoek Arcade-lus",
+      "poorten": "NW"
+    },
+    {
+      "id": "S01",
+      "soort": "eindpunt",
+      "x": 228,
+      "y": 23,
+      "naam": "Reuzenrad",
+      "poorten": "S"
+    },
+    {
+      "id": "S02",
+      "soort": "eindpunt",
+      "x": 194,
+      "y": 106,
+      "naam": "Arcadehal",
+      "poorten": "W"
+    },
+    {
+      "id": "S03",
+      "soort": "eindpunt",
+      "x": 205,
+      "y": 154,
+      "naam": "Wildwaterbaan",
+      "poorten": "S"
+    },
+    {
+      "id": "S04",
+      "soort": "eindpunt",
+      "x": 292,
+      "y": 154,
+      "naam": "Vrijevaltoren",
+      "poorten": "S"
+    },
+    {
+      "id": "S05",
+      "soort": "eindpunt",
+      "x": 390,
+      "y": 118,
+      "naam": "Achtbaan",
+      "poorten": "W"
+    }
+  ],
+  "verbindingen": [
+    {
+      "id": "E01",
+      "a": "D00",
+      "a_poort": "E",
+      "b": "J01",
+      "b_poort": "W",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            65,
+            72
+          ],
+          [
+            141,
+            72
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E02",
+      "a": "J01",
+      "a_poort": "E",
+      "b": "J02",
+      "b_poort": "W",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            141,
+            72
+          ],
+          [
+            174,
+            72
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E03",
+      "a": "J02",
+      "a_poort": "E",
+      "b": "J03",
+      "b_poort": "W",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            174,
+            72
+          ],
+          [
+            228,
+            72
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E04",
+      "a": "J03",
+      "a_poort": "E",
+      "b": "J04",
+      "b_poort": "W",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            228,
+            72
+          ],
+          [
+            260,
+            72
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E05",
+      "a": "J04",
+      "a_poort": "E",
+      "b": "J05",
+      "b_poort": "N",
+      "actief": true,
+      "vorm": "inner_curve",
+      "geometrie": {
+        "kind": "cubic_bezier",
+        "points": [
+          [
+            260,
+            72
+          ],
+          [
+            335,
+            72
+          ],
+          [
+            335,
+            72
+          ],
+          [
+            335,
+            118
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E06",
+      "a": "J05",
+      "a_poort": "S",
+      "b": "J06",
+      "b_poort": "N",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            335,
+            118
+          ],
+          [
+            335,
+            177
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E07",
+      "a": "J06",
+      "a_poort": "S",
+      "b": "C02",
+      "b_poort": "N",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            335,
+            177
+          ],
+          [
+            335,
+            207
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E08",
+      "a": "C02",
+      "a_poort": "W",
+      "b": "J07",
+      "b_poort": "E",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            335,
+            207
+          ],
+          [
+            292,
+            207
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E09",
+      "a": "J07",
+      "a_poort": "W",
+      "b": "J08",
+      "b_poort": "E",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            292,
+            207
+          ],
+          [
+            246,
+            207
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E10",
+      "a": "J08",
+      "a_poort": "W",
+      "b": "J09",
+      "b_poort": "E",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            246,
+            207
+          ],
+          [
+            205,
+            207
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E11",
+      "a": "J09",
+      "a_poort": "W",
+      "b": "C03",
+      "b_poort": "E",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            205,
+            207
+          ],
+          [
+            141,
+            207
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E12",
+      "a": "C03",
+      "a_poort": "N",
+      "b": "J10",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            141,
+            207
+          ],
+          [
+            141,
+            148
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E13",
+      "a": "J10",
+      "a_poort": "N",
+      "b": "J11",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            141,
+            148
+          ],
+          [
+            141,
+            106
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E14",
+      "a": "J11",
+      "a_poort": "N",
+      "b": "J01",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            141,
+            106
+          ],
+          [
+            141,
+            72
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E15",
+      "a": "J02",
+      "a_poort": "N",
+      "b": "C01",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            174,
+            72
+          ],
+          [
+            174,
+            42
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E16",
+      "a": "C01",
+      "a_poort": "E",
+      "b": "J16",
+      "b_poort": "W",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            174,
+            42
+          ],
+          [
+            228,
+            42
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E17",
+      "a": "J16",
+      "a_poort": "S",
+      "b": "J03",
+      "b_poort": "N",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            228,
+            42
+          ],
+          [
+            228,
+            72
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E18",
+      "a": "J16",
+      "a_poort": "N",
+      "b": "S01",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            228,
+            42
+          ],
+          [
+            228,
+            23
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E19",
+      "a": "J04",
+      "a_poort": "N",
+      "b": "J15",
+      "b_poort": "N",
+      "actief": true,
+      "vorm": "outer_curve",
+      "geometrie": {
+        "kind": "cubic_bezier",
+        "points": [
+          [
+            260,
+            72
+          ],
+          [
+            260,
+            -2
+          ],
+          [
+            371,
+            -2
+          ],
+          [
+            371,
+            118
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E20",
+      "a": "J15",
+      "a_poort": "W",
+      "b": "J05",
+      "b_poort": "E",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            371,
+            118
+          ],
+          [
+            335,
+            118
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E21",
+      "a": "J15",
+      "a_poort": "E",
+      "b": "S05",
+      "b_poort": "W",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            371,
+            118
+          ],
+          [
+            390,
+            118
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E22",
+      "a": "J06",
+      "a_poort": "W",
+      "b": "J14",
+      "b_poort": "E",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            335,
+            177
+          ],
+          [
+            292,
+            177
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E23",
+      "a": "J14",
+      "a_poort": "S",
+      "b": "J07",
+      "b_poort": "N",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            292,
+            177
+          ],
+          [
+            292,
+            207
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E24",
+      "a": "J14",
+      "a_poort": "N",
+      "b": "S04",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            292,
+            177
+          ],
+          [
+            292,
+            154
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E25",
+      "a": "J08",
+      "a_poort": "N",
+      "b": "C04",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            246,
+            207
+          ],
+          [
+            246,
+            175
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E26",
+      "a": "C04",
+      "a_poort": "W",
+      "b": "J13",
+      "b_poort": "E",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            246,
+            175
+          ],
+          [
+            205,
+            175
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E27",
+      "a": "J13",
+      "a_poort": "S",
+      "b": "J09",
+      "b_poort": "N",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            205,
+            175
+          ],
+          [
+            205,
+            207
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E28",
+      "a": "J13",
+      "a_poort": "N",
+      "b": "S03",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            205,
+            175
+          ],
+          [
+            205,
+            154
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E29",
+      "a": "J10",
+      "a_poort": "E",
+      "b": "C05",
+      "b_poort": "W",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            141,
+            148
+          ],
+          [
+            172,
+            148
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E30",
+      "a": "C05",
+      "a_poort": "N",
+      "b": "J12",
+      "b_poort": "S",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            172,
+            148
+          ],
+          [
+            172,
+            106
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E31",
+      "a": "J12",
+      "a_poort": "W",
+      "b": "J11",
+      "b_poort": "E",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            172,
+            106
+          ],
+          [
+            141,
+            106
+          ]
+        ]
+      }
+    },
+    {
+      "id": "E32",
+      "a": "J12",
+      "a_poort": "E",
+      "b": "S02",
+      "b_poort": "W",
+      "actief": true,
+      "vorm": "line",
+      "geometrie": {
+        "kind": "polyline",
+        "points": [
+          [
+            172,
+            106
+          ],
+          [
+            194,
+            106
+          ]
+        ]
+      }
+    }
+  ],
+  "attracties": [
+    {
+      "id": "FERRIS",
+      "naam": "Reuzenrad",
+      "doelknoop": "S01",
+      "aankomst_edge": "E18",
+      "vertrek_edge": "E18",
+      "herkenning": null,
+      "gevalideerd": false
+    },
+    {
+      "id": "ARCADE",
+      "naam": "Arcadehal",
+      "doelknoop": "S02",
+      "aankomst_edge": "E32",
+      "vertrek_edge": "E32",
+      "herkenning": null,
+      "gevalideerd": false
+    },
+    {
+      "id": "WILDWATER",
+      "naam": "Wildwaterbaan",
+      "doelknoop": "S03",
+      "aankomst_edge": "E28",
+      "vertrek_edge": "E28",
+      "herkenning": null,
+      "gevalideerd": false
+    },
+    {
+      "id": "FREEFALL",
+      "naam": "Vrijevaltoren",
+      "doelknoop": "S04",
+      "aankomst_edge": "E24",
+      "vertrek_edge": "E24",
+      "herkenning": null,
+      "gevalideerd": false
+    },
+    {
+      "id": "COASTER",
+      "naam": "Achtbaan",
+      "doelknoop": "S05",
+      "aankomst_edge": "E21",
+      "vertrek_edge": "E21",
+      "herkenning": null,
+      "gevalideerd": false
+    }
+  ],
+  "metadata": {
+    "bron": "Door gebruiker aangeleverde bovenaanzichtfoto van het parcours",
+    "status": "Logische kaart; halte- en depotprofielen nog niet fysiek gevalideerd",
+    "coordinaten": "Schematische tekeneenheden, geen gemeten centimeters of meters",
+    "x_richting": "naar rechts",
+    "y_richting": "naar beneden"
+  }
+}

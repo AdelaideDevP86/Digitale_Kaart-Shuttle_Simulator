@@ -21,10 +21,11 @@ positie = {
 plan = planner.plan(positie, ["WILDWATER", "FREEFALL"])
 ```
 
-Start scripts vanuit de map `shuttle`. `data/parcours.json` wordt in de volgende
-stap uitgewerkt. De meegeleverde `tests/fixtures/parcours_logisch.json` is een
-volledige testkaart op basis van de foto, geen goedgekeurde robotconfiguratie.
-Gebruik voor een eerste PC-proef dat testpad in plaats van `data/parcours.json`.
+Start scripts vanuit de map `shuttle`. `data/parcours.json` is de centrale
+kaart voor de simulator en de gedeelde planner. Lees `data/README.md` voor
+de velden, tekengeometrie en de nog te valideren fysieke halteplaatsen.
+`tests/fixtures/parcours_logisch.json` blijft een zelfstandige regressiekaart.
+Beide gebruiken voorlopig het logische profiel, geen goedgekeurde robotconfiguratie.
 
 ## JSON-kaart
 
