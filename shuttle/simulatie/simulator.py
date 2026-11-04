@@ -171,7 +171,9 @@ class Simulator:
             elif b.toestand=='GEBLOKKEERD':
                 self.meldingen.append('Obstakel: beweging en haltetijd gepauzeerd.')
             elif b.toestand=='ZOEKEN':
-                self.meldingen.append('Lijn kwijt: shuttle blijft zoeken.')
+                self.meldingen.append('Lijn kwijt: shuttle zoekt maximaal 8 seconden.')
+            elif b.toestand=='GESTOPT':
+                self.meldingen.append('Gestopt: '+b.reden)
             self._vorige_toestand = b.toestand
         self.meldingen[:] = self.meldingen[-200:]
 

@@ -7,11 +7,12 @@ from . import config, lijnvolger
 
 
 class RitBesturing:
-    def __init__(self, planner, detector, mqtt, rijd, instellingen=None, voor_robot=True):
+    def __init__(self, planner, detector, mqtt, rijd, instellingen=None, voor_robot=True, log=None):
         self.planner, self.detector, self.mqtt = planner, detector, mqtt
         self._rijd = rijd
         self.instellingen = dict(instellingen or config.RIJDEN)
         self.voor_robot = voor_robot
+        self.log = log
         if voor_robot != (mqtt.bron == "robot"):
             raise ValueError("Robotbesturing en MQTT moeten dezelfde bron gebruiken")
         self.toestand, self.hervat_toestand = "GEREED", None
@@ -33,8 +34,15 @@ class RitBesturing:
         self._beweging = self._fase = None
         self._stabiel = self._zoek_sinds = None
         self._marker = None
+        self._punt = self._eind_sinds = None
+        self._fout = False
         self._laatste_status = None
         self._vorige_status_ms = 0
+
+    def _trace(self, soort, **gegevens):
+        if self.log is not None:
+            gegevens.update(stap=self.stapindex, verwacht=self._verwacht, fase=self._fase)
+            self.log.event(self._real_ms, soort, gegevens)
 
     def _motor(self, links=0, rechts=0):
         self.motoren = (links, rechts)
@@ -49,6 +57,7 @@ class RitBesturing:
                         "op_knoop": True, "status": "start_bevestigd"}
         self.plan = None
         self.toestand, self.reden = "GEREED", ""
+        self._fout = False
         self._huidige_edge = self._verwacht = None
 
     def _afwijzen(self, opdracht, reden):
@@ -60,7 +69,7 @@ class RitBesturing:
             return {"resultaat": "gefilterd"}
         actie = opdracht["actie"]
         if actie == "stop":
-            self._stop("Expliciete stopopdracht")
+            self._stop("Expliciete stopopdracht", fout=False)
             self.wachtend = None
             self.mqtt.bevestig(opdracht["command_id"], "accepted", "gestopt")
             return {"resultaat": "accepted"}
@@ -110,10 +119,13 @@ class RitBesturing:
     def _controleer_herkenning(self, doelen):
         if not self.voor_robot:
             return
-        methoden = ("anker", "rechtertak", "linkertak", "t_splitsing", "zwart_blok")
+        methoden = ("anker", "rechtertak", "linkertak", "t_splitsing", "zwart_blok", "lijneinde")
         for doel in doelen:
             if self.planner.kaart.serviceprofiel(doel).get("herkenning") not in methoden:
                 raise ValueError("Onbekende halteherkenning bij " + doel)
+            if (self.planner.kaart.serviceprofiel(doel).get("herkenning") == "lijneinde"
+                    and self.planner.kaart.knopen[self.planner.kaart.doelknoop(doel)]["soort"] != "eindpunt"):
+                raise ValueError("Lijneindeherkenning vereist een eindpunt bij " + doel)
         if self.planner.kaart.depot_herkenning.get("methode") not in ("anker", "t_splitsing", "zwart_blok"):
             raise ValueError("Onbekende depotmethode")
 
@@ -128,7 +140,7 @@ class RitBesturing:
                 doel = stap.get("naar")
                 if doel and self.planner.kaart.knopen[doel]["soort"] in ("eindpunt", "depot"):
                     methode = self._herkenning_voor(doel)
-                    if methode not in ("anker", "rechtertak", "linkertak", "t_splitsing", "zwart_blok"):
+                    if methode not in ("anker", "rechtertak", "linkertak", "t_splitsing", "zwart_blok", "lijneinde"):
                         raise ValueError("Geen gevalideerde herkenning voor eindpunt " + doel)
 
     def _installeer(self, plan, opdracht):
@@ -136,6 +148,8 @@ class RitBesturing:
         self.plan, self.opdracht = plan, dict(opdracht)
         self.stapindex = 0
         self._huidige_edge = self._verwacht = self._marker = None
+        self._punt = self._eind_sinds = None
+        self._fout = False
         self._service_sinds = self._stabiel = self._zoek_sinds = None
         self._beweging = self._fase = None
         self.toestand, self.reden = "RIJDEN", ""
@@ -161,9 +175,15 @@ class RitBesturing:
         self.mqtt.bevestig(nieuw["command_id"], "applied")
         return True
 
-    def _stop(self, reden, onzeker=True):
+    def _stop(self, reden, onzeker=True, fout=True):
         self._motor()
         self.toestand, self.reden = "GESTOPT", reden
+        self._fout = fout
+        if fout:
+            self.laatste_resultaat = {"mission_id": self.opdracht["mission_id"] if self.opdracht else None,
+                                     "resultaat": "fout", "reden": reden,
+                                     "bezocht": list(self.bezoeken)}
+        self._trace("stop", reden=reden, fout=fout)
         if onzeker:
             self.positie["status"] = "onzeker"
             self.positie["op_knoop"] = False
@@ -172,6 +192,7 @@ class RitBesturing:
         if self.toestand != "ZOEKEN":
             self._zoek_sinds = self._actief_ms
             self._fase_voor_zoeken = self._fase
+            self._trace("zoeken", reden=reden, onzeker=onzeker)
         self.toestand, self.reden = "ZOEKEN", reden
         self._stabiel = None
         if onzeker:
@@ -208,6 +229,9 @@ class RitBesturing:
             actie = stap["actie"]
             self.toestand = "DRAAIEN" if actie in ("links", "rechts", "keren") else "RIJDEN"
             self._fase = "UITLIJNEN" if self.toestand == "DRAAIEN" else "VERLATEN"
+            if actie == "keren":
+                self._fase = "WIT"  # Aan een lijneinde eerst vooruit rijden zou de baan verlaten.
+            self._trace("uitgang", van=stap["van"], naar=stap["naar"], actie=actie)
             self.positie["op_knoop"] = False
             # Na dit moment mag een routewissel niet meer dit punt gebruiken.
             self._doe_beweging(patroon)
@@ -215,6 +239,9 @@ class RitBesturing:
     def _doe_beweging(self, p):
         stap, c = self._beweging, self.instellingen
         actie = stap["actie"]
+        if self._actief_ms - self._start_beweging >= c.get("beweging_timeout_ms", 6000):
+            self._stop("Uitgang niet gevonden binnen beweging_timeout_ms")
+            return
         if self._fase == "UITLIJNEN":
             if self._actief_ms - self._start_beweging < c["uitlijnen_ms"]:
                 self._motor(c["basis"], c["basis"])
@@ -270,6 +297,8 @@ class RitBesturing:
         self.positie = {"laatste_punt": knoop, "in_edge": self._huidige_edge,
                         "op_knoop": True, "status": status}
         self._verwacht = self._huidige_edge = self._marker = None
+        self._punt = self._eind_sinds = None
+        self._trace("aankomst", knoop=knoop, patroon=p)
         self._kies_stap(p)
 
     def _doel_methode(self):
@@ -304,15 +333,64 @@ class RitBesturing:
         self.laatste_passage_seq = seq
         self._aankomst(waarneming, "11111")
 
+    def _bevestig_punt(self, p):
+        """Verzamel ontbrekende zijtakken zonder extra passage of meetstop."""
+        punt, c = self._punt, self.instellingen
+        for kant, index in (("links", 0), ("rechts", 4)):
+            veld = kant + "_sinds"
+            if p[index] == "1":
+                if punt.get(veld) is None:
+                    punt[veld] = self._actief_ms
+                if self._actief_ms - punt[veld] >= c.get("zijden_ms", 10):
+                    punt[kant] = True
+            else:
+                punt[veld] = None
+        methode = self._doel_methode()
+        if methode in ("rechtertak", "linkertak"):
+            klopt = punt["rechts" if methode == "rechtertak" else "links"]
+        else:
+            mogelijk = [self.planner.kaart.beweging(self._verwacht, self._huidige_edge, eid)
+                        for _, eid in self.planner.kaart.buren(self._verwacht)
+                        if eid != self._huidige_edge]
+            actie = self.plan["stappen"][self.stapindex].get("actie")
+            klopt = ((punt["links"] or punt["rechts"])
+                     and not (punt["links"] and "links" not in mogelijk)
+                     and not (punt["rechts"] and "rechts" not in mogelijk)
+                     and (actie not in ("links", "rechts") or punt[actie]))
+        if klopt:
+            self._trace("punt_bevestigd", patroon=p, links=punt["links"], rechts=punt["rechts"])
+            self._punt = None
+            self._aankomst({}, p)
+        elif self._actief_ms - punt["sinds"] >= c.get("kruispunt_timeout_ms", 250):
+            self._punt = None
+            self._zoeken("Kruispunt blijft afwijken van geplande uitgang", onzeker=True)
+        else:
+            self._motor(c["basis"], c["basis"])
+
     def _rijden(self, nu_ms, meting):
         p, c = meting["patroon"], self.instellingen
         methode = self._doel_methode()
         if methode == "anker" and meting.get("anker") == self._verwacht:
             self._aankomst({}, p)
             return
+        if self._punt is not None:
+            self._bevestig_punt(p)
+            return
+        if methode == "lijneinde":
+            if p == "00000":
+                if self._eind_sinds is None:
+                    self._eind_sinds = self._actief_ms
+                if self._actief_ms - self._eind_sinds >= c.get("lijneinde_ms", 60):
+                    self._aankomst({}, p)
+                else:
+                    self._motor(c["basis"], c["basis"])
+                return
+            self._eind_sinds = None
         event = self.detector.update(nu_ms, p)
         if event and event["passage_seq"] > self.laatste_passage_seq:
             self.laatste_passage_seq = event["passage_seq"]
+            self._trace("passage", patroon=p, links=event["links"], rechts=event["rechts"],
+                        passage_seq=event["passage_seq"])
             if methode == "anker":
                 self._zoeken("Verwacht uniek anker ontbreekt", onzeker=True)
                 return
@@ -320,28 +398,22 @@ class RitBesturing:
                 self._marker = dict(event)
                 self._marker.update(sinds=self._actief_ms, vrij=None)
             elif methode in ("rechtertak", "linkertak"):
-                kant = "rechts" if methode == "rechtertak" else "links"
-                if not event[kant]:
-                    self._zoeken("Haltepatroon klopt niet", onzeker=True)
-                    return
-                self._aankomst({}, p)
+                self._punt = dict(event, sinds=self._actief_ms)
+                self._bevestig_punt(p)
+                return
+            elif methode == "lijneinde":
+                self._zoeken("Onverwacht kruispunt op aanrit naar lijneinde", onzeker=True)
                 return
             else:
-                # Onmogelijke zijtak is een afwijking, niet een nieuw kaartpunt.
-                mogelijk = [self.planner.kaart.beweging(self._verwacht, self._huidige_edge, eid)
-                            for _, eid in self.planner.kaart.buren(self._verwacht)
-                            if eid != self._huidige_edge]
-                stap = self.plan["stappen"][self.stapindex]
-                actie = stap.get("actie")
-                if ((event["links"] and "links" not in mogelijk)
-                        or (event["rechts"] and "rechts" not in mogelijk)
-                        or (actie in ("links", "rechts") and not event[actie])):
-                    self._zoeken("Kruispunt past niet bij geplande uitgang", onzeker=True)
-                    return
-                self._aankomst({}, p)
+                self._punt = dict(event, sinds=self._actief_ms)
+                self._bevestig_punt(p)
                 return
         if self._marker:
             marker = self._marker
+            if self._actief_ms - marker["sinds"] >= c.get("marker_timeout_ms", 1500):
+                self._marker = None
+                self._zoeken("Haltemarkering niet bevestigd binnen marker_timeout_ms", onzeker=True)
+                return
             marker["links"] |= p[0] == "1"
             marker["rechts"] |= p[4] == "1"
             if methode == "zwart_blok":
@@ -367,7 +439,12 @@ class RitBesturing:
                     return
             else:
                 marker["vrij"] = None
-            self._motor(c["basis"], c["basis"])
+            # Bij het verwachte depot op het zwarte blok blijven staan tijdens
+            # de bevestiging, anders kan hij het blok in marker_ms voorbijrijden.
+            if methode == "zwart_blok" and p == "11111":
+                self._motor()
+            else:
+                self._motor(c["basis"], c["basis"])
         elif p == "00000":
             self._zoeken()
         elif p[0] == "1" or p[4] == "1":
@@ -408,13 +485,19 @@ class RitBesturing:
                         self._stop("Dubbele service in uitvoering")
                     else:
                         self.bezoeken.append(stap["doel"])
+                        self._trace("service_klaar", doel=stap["doel"])
                         self.positie["na_service"] = stap["doel"]
                         self.stapindex += 1
                         self._service_sinds = None
                         self._kies_stap(p)
             elif self.toestand == "ZOEKEN":
-                if self._actief_ms - self._zoek_sinds >= self.instellingen["positie_onzeker_ms"]:
+                zoektijd = self._actief_ms - self._zoek_sinds
+                if zoektijd >= self.instellingen["positie_onzeker_ms"]:
                     self.positie["status"] = "onzeker"
+                if zoektijd >= self.instellingen.get("zoek_timeout_ms", 8000):
+                    self._stop("Lijn/positie niet hersteld binnen zoek_timeout_ms")
+                    self._meld_status(nu_ms)
+                    return
                 if lijnvolger.gewone_lijn(p) and self.positie["status"] != "onzeker":
                     if self._stabiel is None:
                         self._stabiel = self._actief_ms
@@ -443,12 +526,14 @@ class RitBesturing:
                 "kaartversie": self.planner.kaart.versie, "stapindex": self.stapindex,
                 "positie": dict(self.positie), "bezocht": list(self.bezoeken),
                 "wachtende_revisie": self.wachtend["revisie"] if self.wachtend else None,
-                "resultaat": "succesvol" if self.toestand == "KLAAR" else None,
+                "resultaat": "succesvol" if self.toestand == "KLAAR" else "fout" if self._fout else None,
                 "laatste_resultaat": self.laatste_resultaat}
 
     def _meld_status(self, nu):
         status = self.status()
         if status != self._laatste_status or config.verschil_ms(nu, self._vorige_status_ms) >= config.STATUS_INTERVAL_MS:
+            if status != self._laatste_status:
+                self._trace("status", toestand=self.toestand, reden=self.reden, resultaat=status["resultaat"])
             self.status_seq += 1
             self._laatste_status = status
             status = dict(status)

@@ -61,7 +61,7 @@ class SimulatorTests(unittest.TestCase):
 
     def test_lijnverlies_blijft_zoeken_en_reset(self):
         s=Simulator();s.start(['ARCADE']);s.update(500)
-        s.lijn_kwijt=True;s.update(1000)
+        s.lijn_kwijt=True;s.update(2000)
         self.assertEqual(s.besturing.toestand,'ZOEKEN')
         self.assertTrue(s.beeld()['positie_onzeker'])
         s.lijn_kwijt=False;s.update(1000)

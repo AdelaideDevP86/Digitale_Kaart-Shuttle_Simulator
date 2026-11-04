@@ -243,9 +243,9 @@ class Venster(QMainWindow):
             if status['wachtende_revisie']:detail='Nieuwe route wacht op het volgende geschikte routepunt.'
             if beeld['service']:detail=f"Nog {beeld['wacht_over_ms']/1000:.1f} s bij deze attractie."
             if toestand=='GEBLOKKEERD':detail='Dezelfde actie gaat verder zodra het obstakel weg is.'
-            if beeld['positie_onzeker']:detail='Positie onzeker. De shuttle blijft zoeken; reset voor een nieuwe rit.'
+            if beeld['positie_onzeker']:detail='Positie onzeker. Zoeken is begrensd; reset voor een nieuwe rit.'
         elif toestand=='KLAAR':detail='Alle gevraagde bezoeken afgerond. Deze rit is succesvol.'
-        elif toestand=='GESTOPT':detail='Reset naar depot om opnieuw te beginnen.'
+        elif toestand=='GESTOPT':detail=(beeld['status'].get('reden') or 'Rit gestopt.')+' Reset naar depot om opnieuw te beginnen.'
         self.onderschrift.setText(detail)
         plan=beeld['plan']
         doelen=(plan['bestemmingen'] if plan else self.doelen()) if beeld['voorbeeld'] else self.sim.besturing.alle_doelen

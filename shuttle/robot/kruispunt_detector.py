@@ -14,12 +14,14 @@ class KruispuntDetector:
         self.lijn_sinds_ms = None
         self.passage_seq = 0
         self._links = self._rechts = False
+        self._links_sinds = self._rechts_sinds = None
 
     def bevestig_verlaten(self):
         # Alleen aanroepen NA een al bevestigde gewone uitgaande lijn.
         self.vrijgegeven = True
         self.kandidaat_sinds_ms = self.lijn_sinds_ms = None
         self._links = self._rechts = False
+        self._links_sinds = self._rechts_sinds = None
 
     def update(self, nu_ms, patroon):
         if not geldig(patroon):
@@ -27,6 +29,7 @@ class KruispuntDetector:
         if gewone_lijn(patroon):
             self.kandidaat_sinds_ms = None
             self._links = self._rechts = False
+            self._links_sinds = self._rechts_sinds = None
             if self.lijn_sinds_ms is None:
                 self.lijn_sinds_ms = nu_ms
             if verschil_ms(nu_ms, self.lijn_sinds_ms) >= self.instellingen["vrij_ms"]:
@@ -38,11 +41,22 @@ class KruispuntDetector:
         if not breed or not self.vrijgegeven:
             self.kandidaat_sinds_ms = None
             self._links = self._rechts = False
+            self._links_sinds = self._rechts_sinds = None
             return None
         if self.kandidaat_sinds_ms is None:
             self.kandidaat_sinds_ms = nu_ms
-        self._links = self._links or patroon[0] == "1"
-        self._rechts = self._rechts or patroon[4] == "1"
+        # Een losse buitenste sensorflits is nog geen bevestigde zijtak.
+        for kant, index in (("links", 0), ("rechts", 4)):
+            veld = "_" + kant + "_sinds"
+            sinds = getattr(self, veld)
+            if patroon[index] != "1":
+                setattr(self, veld, None)
+            else:
+                if sinds is None:
+                    sinds = nu_ms
+                    setattr(self, veld, sinds)
+                if verschil_ms(nu_ms, sinds) >= self.instellingen.get("zijden_ms", 10):
+                    setattr(self, "_" + kant, True)
         if verschil_ms(nu_ms, self.kandidaat_sinds_ms) < self.instellingen["breed_ms"]:
             return None
         self.passage_seq += 1

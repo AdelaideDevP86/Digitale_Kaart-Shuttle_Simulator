@@ -20,6 +20,12 @@ Alle modules kunnen voor softwaretests op de PC worden geimporteerd. Alleen
 
 ## Wat je eerst moet invullen voor echt rijden
 
+**Update campusproef:** de lokale rit met Wildwaterbaan en Vrijevaltoren staat
+nu geconfigureerd in `data/parcours_robot.json`; zie [TEST_MORGEN.md](TEST_MORGEN.md)
+voor de concrete instellingen, upload en afstelling. De oorspronkelijke
+`data/parcours.json` blijft logisch voor de simulator. De onderstaande algemene
+instructies beschrijven ook hoe je later extra robotdoelen toevoegt.
+
 De code start nog niet automatisch met de huidige logische kaart. Dit is een
 bewuste aansluiting op `RoutePlanner.plan(..., voor_robot=True)`.
 
@@ -31,7 +37,9 @@ bewuste aansluiting op `RoutePlanner.plan(..., voor_robot=True)`.
    de T-haltes van de oude firmware. Stel versie/profiel en validatie pas na
    baancontrole bij. De depot-/startmethode moet ook gevalideerd zijn.
 3. Herkenningsnamen: `rechtertak`, `linkertak`, `t_splitsing`, `zwart_blok`,
-   `anker`. Een anker vereist dat echte extra hardware `meting['anker']` met
+   `anker`, `lijneinde`. Lijneindeherkenning geldt alleen op de verwachte
+   laatste edge naar een eindpunt; wit moet `lijneinde_ms` aanhouden.
+   Een anker vereist dat echte extra hardware `meting['anker']` met
    een unieke knoop-ID levert; de gewone vijf lijnsensoren doen dat niet.
    `t_splitsing` bevestigt beide zijtakken en daarna geen doorgaande lijn.
    `zwart_blok` vraagt ononderbroken vijf zwarte bits gedurende `marker_ms`.
@@ -64,9 +72,10 @@ gebruikt de draaisturing. Wachten is een toestand van 5000 ms actieve tijd,
 geen `sleep(5)`. Obstakelblokkering bevriest bewegings- en haltetimers; na
 vrijgave hervat dezelfde onafgeronde actie. Expliciete STOP blijft gestopt.
 
-Zoeken en draaien hebben geen maximale zoektijd. Lang lijnverlies maakt de
-positie onzeker; de robot blijft zoeken, maar verbruikt geen routestap en
-meldt geen fictieve aankomst. Na onzekerheid is gecontroleerde bevestiging
+Zoeken duurt maximaal `zoek_timeout_ms` (8000 ms), een draai/uitgang maximaal
+`beweging_timeout_ms` (6000 ms). Daarna staat de robot stil met resultaat `fout`.
+Vanaf `positie_onzeker_ms` (1800 ms) is hervatten zonder herlokalisatie niet
+toegestaan. Hij verbruikt geen fictieve routestap. Na onzekerheid is bevestiging
 bij het depot nodig. Gewoon ergens een lijn terugvinden bewijst de plaats niet.
 
 Nieuwe doelen onderweg vervangen de nog resterende doelen. Reeds bezochte

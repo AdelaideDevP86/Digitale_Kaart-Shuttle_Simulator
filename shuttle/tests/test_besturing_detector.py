@@ -188,16 +188,16 @@ class BesturingTests(unittest.TestCase):
         p.ronde()
         self.assertEqual(p.b.bezoeken, ['ARCADE'])
 
-    def test_lang_zoeken_geen_timeout_succes_of_stap(self):
+    def test_lang_zoeken_stopt_met_fout_zonder_succes_of_stap(self):
         p = Proef(); p.stuur(); p.tik(); p.verlaat()
         index = p.b.stapindex
         p.tik('00000')
         p.tik('00000', dt=600000)
-        self.assertEqual(p.b.toestand, 'ZOEKEN')
+        self.assertEqual(p.b.toestand, 'GESTOPT')
         self.assertEqual(p.b.stapindex, index)
         self.assertEqual(p.b.positie['status'], 'onzeker')
-        self.assertNotEqual(p.b.motoren, (0,0))
-        self.assertIsNone(p.b.status()['resultaat'])
+        self.assertEqual(p.b.motoren, (0,0))
+        self.assertEqual(p.b.status()['resultaat'], 'fout')
         p.stuur('stop')
         self.assertEqual(p.b.toestand, 'GESTOPT')
         self.assertEqual(p.b.motoren, (0,0))
