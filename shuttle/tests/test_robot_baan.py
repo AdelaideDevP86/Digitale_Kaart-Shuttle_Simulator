@@ -75,6 +75,8 @@ class RobotBaanTests(unittest.TestCase):
                 self.assertEqual(p.b._fase, 'TERUG')
                 self.assertTrue(p.b.motoren[0] < 0 and p.b.motoren[1] < 0)  # achteruit
                 p.tik('00100')  # lijneinde weer onder de sensoren
+                self.assertEqual(p.b.motoren, (0, 0))
+                p.tik('00100', dt=25)  # stabiel teruggevonden voordat hij draait
                 self.assertEqual(p.b._fase, 'WIT')
             elif p.b._verwacht:
                 doel, methode = p.b._verwacht, p.b._doel_methode()
@@ -84,7 +86,7 @@ class RobotBaanTests(unittest.TestCase):
                     p.tik('00000', dt=config.RIJDEN['lijneinde_ms'])
                     self.assertEqual(p.b.toestand, 'WACHTEN')
                 elif methode == 'zwart_blok':
-                    p.tik('11111'); p.tik('11111', dt=10)
+                    p.tik('11111')
                     self.assertEqual(p.b.motoren, (0, 0))
                     p.tik('11111', dt=config.RIJDEN['marker_ms']-1)
                     self.assertNotEqual(p.b.toestand, 'KLAAR')
@@ -112,8 +114,8 @@ class RobotBaanTests(unittest.TestCase):
         p.tik('00000', dt=config.RIJDEN['terug_max_ms'] - 10)
         self.assertEqual(p.b._fase, 'TERUG')      # nog geen lijn: blijft achteruit
         p.tik('00000', dt=10)
-        self.assertIn(p.b._fase, ('WIT', 'ZWART'))  # na de maximale tijd toch draaien
-        self.assertTrue(p.b.motoren[0] < 0 < p.b.motoren[1])  # linksom draaien
+        self.assertEqual(p.b.toestand, 'GESTOPT')  # Zonder teruglijn niet blind draaien.
+        self.assertEqual(p.b.motoren, (0, 0))
 
     def test_keertijd_telt_vanaf_draaien_niet_vanaf_terugrijden(self):
         # Rit 14:47: na 800 ms terugrijden accepteerde hij na 0,2 s draaien al de
@@ -122,14 +124,16 @@ class RobotBaanTests(unittest.TestCase):
         p.tik('00000'); p.tik('00000', dt=config.RIJDEN['lijneinde_ms'])
         p.tik('00000', dt=5000)
         self.assertEqual(p.b._fase, 'TERUG')
-        for _ in range(config.RIJDEN['terug_max_ms'] // 5):
+        for _ in range((config.RIJDEN['terug_max_ms'] - 100) // 5):
             p.tik('00000')
+        p.tik('00100'); p.tik('00100', dt=25)
         self.assertIn(p.b._fase, ('WIT', 'ZWART'))
         for _ in range(60):                 # 300 ms draaien: dichtbijgelegen lijn
             p.tik('00100' if _ > 20 else '00000')
         self.assertIn(p.b._fase, ('WIT', 'ZWART'))   # nog niet accepteren
         for _ in range(60): p.tik('00000')
         for _ in range(20): p.tik('00100')           # na ruim 700 ms: teruglijn
+        p.tik('00100', dt=25)                       # lijn vasthouden tijdens bevestiging
         self.assertNotIn(p.b._fase, ('WIT', 'ZWART'))
 
     def test_witte_flits_aanrit_is_nog_geen_halte(self):
@@ -164,7 +168,7 @@ class RobotBaanTests(unittest.TestCase):
         p.tik('11100'); p.tik('11100', dt=10)
         self.assertEqual(p.b.toestand, 'RIJDEN')
         p.tik('11100', dt=config.RIJDEN['kruispunt_timeout_ms'])
-        self.assertEqual(p.b.toestand, 'ZOEKEN')
+        self.assertEqual(p.b.toestand, 'GESTOPT')
         self.assertEqual(p.b.stapindex, index)
         self.assertEqual(p.b.positie['laatste_punt'], 'D00')
         p.tik('00100', dt=config.RIJDEN['zoek_timeout_ms'])
@@ -201,7 +205,7 @@ class RobotBaanTests(unittest.TestCase):
         p = BaanProef(); p.stuur(); p.tik(); p.verlaat()
         p.tik('11111'); p.tik('11111', dt=10); p.tik('11111', dt=500)
         self.assertNotEqual(p.b.toestand, 'KLAAR')
-        self.assertIsNone(p.b.status()['resultaat'])
+        self.assertNotEqual(p.b.status()['resultaat'], 'succesvol')
 
 
 class LogTests(unittest.TestCase):
@@ -274,6 +278,44 @@ class HoofdloopTests(unittest.TestCase):
                 stop.assert_called_once()
             regels = [json.loads(r) for r in Path(pad).read_text().splitlines()]
             self.assertEqual(regels[-1]['soort'], 'exception')
+
+
+class DepotBinnenkomstTests(unittest.TestCase):
+    """Ritten 16:00: het depotblok ligt vlak achter J01 en hij komt er soms schuin op."""
+
+    def naar_laatste_afslag(self):
+        p = BaanProef(); self.assertEqual(p.stuur(doelen=['ARCADE'])['resultaat'], 'accepted')
+        for _ in range(3000):
+            b = p.b
+            if b._beweging and b._beweging['van'] == 'J01' and b._beweging['naar'] == 'D00':
+                return p
+            if b.toestand == 'WACHTEN':
+                p.tik('00000', dt=5000)
+            elif b._beweging:
+                p.verlaat()
+            elif b._verwacht and b._doel_methode() == 'lijneinde':
+                p.tik('00000'); p.tik('00000', dt=config.RIJDEN['lijneinde_ms'])
+            elif b._verwacht:
+                p.naar_volgende_knoop()
+            else:
+                p.tik()
+        raise AssertionError('Laatste afslag niet bereikt')
+
+    def speel(self, reeks):
+        p = self.naar_laatste_afslag()
+        for patroon, ms in reeks:
+            for _ in range(ms // 5):
+                p.tik(patroon)
+        return p.b
+
+    def test_draaien_eindigt_op_het_blok(self):
+        b = self.speel([('11111', 100), ('00000', 100), ('11000', 200), ('11111', 1200)])
+        self.assertEqual(b.toestand, 'KLAAR')
+
+    def test_schuin_op_het_blok_vier_van_vijf(self):
+        b = self.speel([('11111', 100), ('00000', 300), ('01000', 100), ('00100', 150),
+                        ('00111', 150), ('01111', 1000)])
+        self.assertEqual(b.toestand, 'KLAAR')
 
 
 if __name__ == '__main__':

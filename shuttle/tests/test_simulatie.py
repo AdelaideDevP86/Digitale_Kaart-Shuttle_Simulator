@@ -59,13 +59,15 @@ class SimulatorTests(unittest.TestCase):
         self.assertEqual((na['x'],na['y']),(voor['x'],voor['y']))
         s.obstakel=False;afronden(s)
 
-    def test_lijnverlies_blijft_zoeken_en_reset(self):
+    def test_lijnverlies_zoekt_kort_en_stopt_bij_onzekerheid(self):
         s=Simulator();s.start(['ARCADE']);s.update(500)
-        s.lijn_kwijt=True;s.update(2000)
+        s.lijn_kwijt=True;s.update(1000)
         self.assertEqual(s.besturing.toestand,'ZOEKEN')
+        s.update(1000)
+        self.assertEqual(s.besturing.toestand,'GESTOPT')
         self.assertTrue(s.beeld()['positie_onzeker'])
         s.lijn_kwijt=False;s.update(1000)
-        self.assertEqual(s.besturing.toestand,'ZOEKEN')
+        self.assertEqual(s.besturing.toestand,'GESTOPT')
         s.reset();self.assertEqual(s.besturing.toestand,'GEREED')
         self.assertFalse(s.beeld()['positie_onzeker'])
 

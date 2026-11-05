@@ -189,14 +189,17 @@ class RitBesturing:
             self.positie["op_knoop"] = False
 
     def _zoeken(self, reden="Lijn kwijt", onzeker=False):
+        # Een verkeerde routewaarneming wordt niet opgelost door willekeurig
+        # om de as te draaien. Alleen tijdelijk lijnverlies mag herstellen.
+        if onzeker or self.positie["status"] == "onzeker":
+            self._stop(reden)
+            return
         if self.toestand != "ZOEKEN":
             self._zoek_sinds = self._actief_ms
             self._fase_voor_zoeken = self._fase
             self._trace("zoeken", reden=reden, onzeker=onzeker)
         self.toestand, self.reden = "ZOEKEN", reden
         self._stabiel = None
-        if onzeker:
-            self.positie["status"] = "onzeker"
         self._motor(*lijnvolger.draaicommando(self._pid["richting"], self.instellingen["zoeken"]))
 
     def _kies_stap(self, patroon):
@@ -228,12 +231,14 @@ class RitBesturing:
             self._rechtdoor_aanwezig = self._rechtdoor_bij(stap)
             self._stabiel = None
             actie = stap["actie"]
+            if actie in ("links", "rechts", "keren"):
+                self._pid["richting"] = self.instellingen["keer_richting"] if actie == "keren" else actie
+                lijnvolger.reset_pid(self._pid)
             self.toestand = "DRAAIEN" if actie in ("links", "rechts", "keren") else "RIJDEN"
             self._fase = "UITLIJNEN" if self.toestand == "DRAAIEN" else "VERLATEN"
             if actie == "keren":
-                # Aan een lijneinde eerst een stukje TERUG tot de lijn weer onder de
-                # sensoren ligt: dan staat het draaipunt op de lijn en vindt hij die
-                # na 180 graden altijd terug. Vooruit rijden zou de baan verlaten.
+                # Eerst de uitgaande lijn stabiel terugvinden; pas daarna keren.
+                # De fysieke geometrie en minimumkeertijd blijven afstelpunten.
                 self._fase = "TERUG"
             self._trace("uitgang", van=stap["van"], naar=stap["naar"], actie=actie)
             self.positie["op_knoop"] = False
@@ -256,12 +261,23 @@ class RitBesturing:
             self._stop("Uitgang niet gevonden binnen beweging_timeout_ms")
             return
         if self._fase == "TERUG":
-            if p[1:4] != "000" or self._actief_ms - self._start_beweging >= c.get("terug_max_ms", 800):
-                self._fase = "WIT"
-                self._stabiel = None
-                self._draai_start = self._actief_ms  # minimale keertijd telt vanaf het DRAAIEN
+            if lijnvolger.gewone_lijn(p):
+                # Tijdens bevestigen niet doorrijden langs de gevonden lijn.
+                self._motor()
+                if self._stabiel is None:
+                    self._stabiel = self._actief_ms
+                if self._actief_ms - self._stabiel >= c["lijn_ms"]:
+                    self._fase = "WIT"
+                    self._stabiel = None
+                    self._draai_start = self._actief_ms
+                else:
+                    return
             else:
-                v = c.get("halte_basis", c["basis"])
+                self._stabiel = None
+                if self._actief_ms - self._start_beweging >= c.get("terug_max_ms", 800):
+                    self._stop("Lijn niet teruggevonden tijdens achteruitrijden voor keren")
+                    return
+                v = c.get("terug_snelheid", c["basis"])
                 self._motor(-v, -v)
                 return
         if self._fase == "UITLIJNEN":
@@ -272,7 +288,6 @@ class RitBesturing:
             self._stabiel = None
         if self._fase in ("WIT", "ZWART"):
             richting = c["keer_richting"] if actie == "keren" else actie
-            self._motor(*lijnvolger.draaicommando(richting, c["draaien"]))
             if self._fase == "WIT":
                 if actie in ("links", "rechts") and self._rechtdoor_aanwezig:
                     # Doorgaande lijn (T of kruising): zwart dat alleen aan de draaikant
@@ -287,7 +302,17 @@ class RitBesturing:
                     # zwart aan de draaikant is de nieuwe lijn. Midden wit is genoeg.
                     gewenst = p[2] == "0"
             else:
-                gewenst = p[2] == "1"
+                op_depotblok = (stap["naar"] == self.planner.kaart.depot
+                                and self._herkenning_voor(stap["naar"]) == "zwart_blok"
+                                and p.count("1") >= 4)
+                gewenst = ((p[2] == "1" and lijnvolger.gewone_lijn(p) or op_depotblok)
+                           and (actie != "keren" or self._actief_ms - self._draai_start >= c["keer_min_ms"]))
+            if self._fase == "ZWART" and gewenst:
+                # Eerst remmen op de gevonden lijn. Al doordraaiend 25 ms
+                # bevestigen kan hem voorbij de juiste uitgang laten schieten.
+                self._motor()
+            else:
+                self._motor(*lijnvolger.draaicommando(richting, c["draaien"]))
             if gewenst:
                 if self._stabiel is None:
                     self._stabiel = self._actief_ms
@@ -306,10 +331,15 @@ class RitBesturing:
             self._motor(*lijnvolger.volg_lijn(p, self._actief_ms, self._pid, c))
         else:
             self._motor(c["basis"], c["basis"])
-        if lijnvolger.gewone_lijn(p):
+        # Het depotblok ligt vlak achter J01: dan rijdt hij er al op voordat er
+        # 25 ms gewone lijn is geweest. Op het blok telt de uitgang als verlaten,
+        # zodat de depotherkenning (zwart_blok) het overneemt.
+        naar_depot = (stap["naar"] == self.planner.kaart.depot and actie != "vertrek"
+                      and self._herkenning_voor(stap["naar"]) == "zwart_blok")
+        if lijnvolger.gewone_lijn(p) or (naar_depot and p.count("1") >= 4):
             if self._stabiel is None:
                 self._stabiel = self._actief_ms
-            if self._actief_ms - self._stabiel >= c["lijn_ms"]:
+            if self._actief_ms - self._stabiel >= c["lijn_ms"] or not lijnvolger.gewone_lijn(p):
                 self._huidige_edge, self._verwacht = stap["via"], stap["naar"]
                 self.positie.pop("na_service", None)
                 self.positie["verwacht_punt"] = self._verwacht
@@ -416,6 +446,17 @@ class RitBesturing:
         if methode == "anker" and meting.get("anker") == self._verwacht:
             self._aankomst({}, p)
             return
+        if methode == "zwart_blok":
+            # Behoud de huidige afstelling: minstens vier sensoren op het blok.
+            # Een smallere zijtak/gewone lijn start nog geen depotbevestiging.
+            if p.count("1") >= 4:
+                if self._marker is None:
+                    self._marker = {"zwart_sinds": self._actief_ms}
+                self._motor()
+                if self._actief_ms - self._marker["zwart_sinds"] >= c["marker_ms"]:
+                    self._aankomst({}, p)
+                return
+            self._marker = None
         if self._punt is not None:
             self._bevestig_punt(p)
             return
@@ -437,7 +478,9 @@ class RitBesturing:
             if methode == "anker":
                 self._zoeken("Verwacht uniek anker ontbreekt", onzeker=True)
                 return
-            if methode in ("zwart_blok", "t_splitsing"):
+            if methode == "zwart_blok":
+                pass  # Smal breedpatroon: geen depotbewijs en geen extra kaartpunt.
+            elif methode == "t_splitsing":
                 self._marker = dict(event)
                 self._marker.update(sinds=self._actief_ms, vrij=None)
             elif methode in ("rechtertak", "linkertak"):
@@ -459,19 +502,7 @@ class RitBesturing:
                 return
             marker["links"] |= p[0] == "1"
             marker["rechts"] |= p[4] == "1"
-            if methode == "zwart_blok":
-                if p != "11111":
-                    marker["zwart_sinds"] = None
-                    if p[0] == p[4] == "0":
-                        self._zoeken("Breed doelvlak te kort of onderbroken", onzeker=True)
-                        return
-                else:
-                    if marker.get("zwart_sinds") is None:
-                        marker["zwart_sinds"] = self._actief_ms
-                    if self._actief_ms - marker["zwart_sinds"] >= c["marker_ms"]:
-                        self._aankomst({}, p)
-                        return
-            elif p[0] == p[4] == "0":
+            if p[0] == p[4] == "0":
                 if marker["vrij"] is None:
                     marker["vrij"] = self._actief_ms
                 if self._actief_ms - marker["vrij"] >= c["lijn_ms"]:
@@ -482,12 +513,7 @@ class RitBesturing:
                     return
             else:
                 marker["vrij"] = None
-            # Bij het verwachte depot op het zwarte blok blijven staan tijdens
-            # de bevestiging, anders kan hij het blok in marker_ms voorbijrijden.
-            if methode == "zwart_blok" and p == "11111":
-                self._motor()
-            else:
-                self._motor(c["basis"], c["basis"])
+            self._motor(c["basis"], c["basis"])
         elif p == "00000":
             self._zoeken()
         elif p[2] == "1" and (p[0] == "1" or p[4] == "1"):
@@ -535,23 +561,36 @@ class RitBesturing:
                         self._kies_stap(p)
             elif self.toestand == "ZOEKEN":
                 zoektijd = self._actief_ms - self._zoek_sinds
-                if zoektijd >= self.instellingen["positie_onzeker_ms"]:
-                    self.positie["status"] = "onzeker"
                 if zoektijd >= self.instellingen.get("zoek_timeout_ms", 8000):
                     self._stop("Lijn/positie niet hersteld binnen zoek_timeout_ms")
                     self._meld_status(nu_ms)
                     return
-                if lijnvolger.gewone_lijn(p) and self.positie["status"] != "onzeker":
+                if (self.positie["status"] == "onzeker"
+                        or zoektijd >= self.instellingen["positie_onzeker_ms"]):
+                    self._stop("Positie onzeker na lijnverlies; opnieuw starten in depot")
+                    self._meld_status(nu_ms)
+                    return
+                if lijnvolger.gewone_lijn(p):
+                    self._motor()
                     if self._stabiel is None:
                         self._stabiel = self._actief_ms
+                        self._trace("lijn_vastpakken", patroon=p)
                     if self._actief_ms - self._stabiel >= self.instellingen["lijn_ms"]:
-                        self.toestand = "RIJDEN"
                         self._fase = getattr(self, "_fase_voor_zoeken", None)
+                        self.toestand = ("DRAAIEN" if self._beweging and
+                                         self._beweging["actie"] in ("links", "rechts", "keren") else "RIJDEN")
+                        self.reden = ""
                         self._stabiel = None
                         lijnvolger.reset_pid(self._pid)
+                        if self._beweging is not None:
+                            self._doe_beweging(p)
+                        elif self._verwacht is not None:
+                            self._rijden(nu_ms, meting)
+                        else:
+                            self._stop("Geen uitgang om na lijnherstel te hervatten")
                 else:
                     self._stabiel = None
-                self._motor(*lijnvolger.draaicommando(self._pid["richting"], self.instellingen["zoeken"]))
+                    self._motor(*lijnvolger.draaicommando(self._pid["richting"], self.instellingen["zoeken"]))
             elif self._beweging is not None:
                 self._doe_beweging(p)
             elif self.positie["op_knoop"]:

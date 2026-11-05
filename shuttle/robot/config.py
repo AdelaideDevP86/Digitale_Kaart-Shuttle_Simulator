@@ -1,6 +1,7 @@
 """Afstelling uit de eerdere robotcode. Bevestig de hardware op jullie bord."""
 import time
 
+BESTURING_VERSIE = "LIJNHERSTEL_20261105_1"
 KAARTPAD = "data/parcours_robot.json"
 HARDWARE_BEVESTIGD = True  # Bestaande pinnen/polariteit uit jullie rijdende robot.
 STARTPOSITIE_BEVESTIGD = True  # Iedere herstart: fysiek in D00, richting J01 zetten.
@@ -20,7 +21,7 @@ RIJDEN = {
     "max_i": 2.0, "d_venster_ms": 50, "d_metingen": 10,
     "min_motor": -0.15,
     "lijn_ms": 25, "uitlijnen_ms": 120,
-    "keer_min_ms": 700, "terug_max_ms": 0, "keer_richting": "links",
+    "keer_min_ms": 700, "terug_max_ms": 800, "terug_snelheid": 0.35, "keer_richting": "links",
     "positie_onzeker_ms": 1800, "zoek_timeout_ms": 8000,
     "beweging_timeout_ms": 6000,
     "zijden_ms": 10, "kruispunt_timeout_ms": 250,

@@ -45,7 +45,10 @@ def volg_lijn(patroon, nu, toestand, instellingen):
     historie = toestand["historie"]
     d = 0
     if historie and nu > historie[0][0]:
-        d = (fout - historie[0][1]) * instellingen["d_venster_ms"] / (nu - historie[0][0])
+        # Bij de eerste twee samples zit er nog geen volledig 50ms-venster
+        # in de historie. Een 5ms-meting mag de D-term niet tienmaal vergroten.
+        venster = instellingen["d_venster_ms"]
+        d = (fout - historie[0][1]) * venster / max(venster, nu - historie[0][0])
     historie.append((nu, fout))
     while len(historie) > instellingen["d_metingen"]:
         historie.pop(0)

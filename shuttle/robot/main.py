@@ -40,6 +40,7 @@ def main():
             raise ValueError("Controleer pinnen/polariteit en zet HARDWARE_BEVESTIGD in robot/config.py")
         kaart = ParcoursKaart.uit_bestand(config.KAARTPAD)
         controleer_start(kaart, config.LOKALE_BESTEMMINGEN)
+        print("Besturing:", config.BESTURING_VERSIE)
         hardware.initialiseer(config.HARDWARE)
         detector = KruispuntDetector(config.DETECTOR)
         mqtt = RobotMqtt(config.MQTT)

@@ -211,8 +211,8 @@ class BesturingTests(unittest.TestCase):
         p.verlaat()
         p.passage += 1
         p.b.verwerk_waarneming(dict(knoop='D00', passage_seq=p.passage))
-        self.assertEqual(p.b.toestand, 'ZOEKEN')
-        self.assertIsNone(p.b.status()['resultaat'])
+        self.assertEqual(p.b.toestand, 'GESTOPT')
+        self.assertEqual(p.b.status()['resultaat'], 'fout')
 
     def test_rechtdoor_passage_geen_meetstop(self):
         p = Proef(); p.stuur(); p.tik(); p.verlaat()
@@ -281,7 +281,7 @@ class BesturingTests(unittest.TestCase):
         p.b.positie=dict(laatste_punt='J01',in_edge='E02',op_knoop=True,status='route_aannemelijk')
         p.stuur(doelen=['FERRIS']); p.tik(); p.verlaat()
         p.tik('00111'); p.tik('00111',dt=10)
-        self.assertIsNotNone(p.b._marker)
+        self.assertIsNone(p.b._marker)  # Een gedeeltelijke zijtak is nog geen blok.
         p.tik('11111',dt=20); p.tik('11111',dt=499)
         self.assertEqual(p.b._verwacht,'D00')
         p.tik('11111',dt=1)
