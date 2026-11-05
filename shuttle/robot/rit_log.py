@@ -38,7 +38,7 @@ class RitLog:
         if self._geschreven == self._seq:
             return False
         regels = sorted(self.events + self.metingen, key=lambda r: r["seq"])
-        with open(self.instellingen["pad"], "w") as bestand:
+        with open(self.instellingen["pad"], "a") as bestand:
             for regel in regels:
                 bestand.write(json.dumps(regel) + "\n")
         self._geschreven = self._seq

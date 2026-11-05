@@ -52,8 +52,7 @@ class RobotBaanTests(unittest.TestCase):
         kaart = ParcoursKaart.uit_bestand(str(ROBOTKAART))
         controleer_start(kaart, ['WILDWATER', 'FREEFALL'])
         controleer_start(kaart, [])  # MQTT: doelen pas bij ontvangst controleren.
-        with self.assertRaisesRegex(ValueError, 'COASTER'):
-            controleer_start(kaart, ['COASTER'])
+        controleer_start(kaart, ['FERRIS', 'ARCADE', 'COASTER'])  # alle vijf lijneinden
         self.assertEqual(kaart.doelknoop('WILDWATER'), 'S03')
         self.assertEqual(kaart.doelknoop('FREEFALL'), 'S04')
 
@@ -73,6 +72,9 @@ class RobotBaanTests(unittest.TestCase):
                 self.assertEqual(p.b.motoren, (0, 0))
                 p.tik('00000', dt=1)
                 self.assertEqual(p.b._beweging['actie'], 'keren')
+                self.assertEqual(p.b._fase, 'TERUG')
+                self.assertTrue(p.b.motoren[0] < 0 and p.b.motoren[1] < 0)  # achteruit
+                p.tik('00100')  # lijneinde weer onder de sensoren
                 self.assertEqual(p.b._fase, 'WIT')
             elif p.b._verwacht:
                 doel, methode = p.b._verwacht, p.b._doel_methode()
@@ -101,14 +103,43 @@ class RobotBaanTests(unittest.TestCase):
         self.assertEqual(p.b.motoren, (0, 0))
         self.assertEqual(p.b.status()['resultaat'], 'succesvol')
 
+    def test_terugrijden_bij_keren_is_begrensd(self):
+        p = BaanProef(); p.bij_eerste_lijneinde()
+        p.tik('00000'); p.tik('00000', dt=config.RIJDEN['lijneinde_ms'])
+        self.assertEqual(p.b.toestand, 'WACHTEN')
+        p.tik('00000', dt=5000)
+        self.assertEqual(p.b._fase, 'TERUG')
+        p.tik('00000', dt=config.RIJDEN['terug_max_ms'] - 10)
+        self.assertEqual(p.b._fase, 'TERUG')      # nog geen lijn: blijft achteruit
+        p.tik('00000', dt=10)
+        self.assertIn(p.b._fase, ('WIT', 'ZWART'))  # na de maximale tijd toch draaien
+        self.assertTrue(p.b.motoren[0] < 0 < p.b.motoren[1])  # linksom draaien
+
+    def test_keertijd_telt_vanaf_draaien_niet_vanaf_terugrijden(self):
+        # Rit 14:47: na 800 ms terugrijden accepteerde hij na 0,2 s draaien al de
+        # lijn waar hij net vandaan kwam. De 700 ms minimum moet na het terugrijden gelden.
+        p = BaanProef(); p.bij_eerste_lijneinde()
+        p.tik('00000'); p.tik('00000', dt=config.RIJDEN['lijneinde_ms'])
+        p.tik('00000', dt=5000)
+        self.assertEqual(p.b._fase, 'TERUG')
+        for _ in range(config.RIJDEN['terug_max_ms'] // 5):
+            p.tik('00000')
+        self.assertIn(p.b._fase, ('WIT', 'ZWART'))
+        for _ in range(60):                 # 300 ms draaien: dichtbijgelegen lijn
+            p.tik('00100' if _ > 20 else '00000')
+        self.assertIn(p.b._fase, ('WIT', 'ZWART'))   # nog niet accepteren
+        for _ in range(60): p.tik('00000')
+        for _ in range(20): p.tik('00100')           # na ruim 700 ms: teruglijn
+        self.assertNotIn(p.b._fase, ('WIT', 'ZWART'))
+
     def test_witte_flits_aanrit_is_nog_geen_halte(self):
         p = BaanProef(); p.bij_eerste_lijneinde()
         index = p.b.stapindex
-        p.tik('00000'); p.tik('00000', dt=59)
+        p.tik('00000'); p.tik('00000', dt=99)
         self.assertEqual(p.b.toestand, 'RIJDEN')
         self.assertEqual(p.b.bezoeken, [])
         p.tik('00100')
-        p.tik('00000'); p.tik('00000', dt=59)
+        p.tik('00000'); p.tik('00000', dt=99)
         self.assertEqual(p.b.stapindex, index)
         p.tik('00000', dt=1)
         self.assertEqual(p.b.toestand, 'WACHTEN')
@@ -201,6 +232,8 @@ class HoofdloopTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             pad = str(Path(tmp) / 'ritlog.jsonl')
             with patch.object(config, 'KAARTPAD', str(ROBOTKAART)), \
+                 patch.object(config, 'LOKALE_BESTEMMINGEN', ('WILDWATER', 'FREEFALL')), \
+                 patch.object(config, 'START_WACHTTIJD_MS', 0, create=True), \
                  patch.object(config, 'LOG', dict(config.LOG, pad=pad)), \
                  patch.object(robot_main, 'verbind_wifi'), \
                  patch.object(robot_main.hardware, 'initialiseer') as init, \
@@ -222,7 +255,14 @@ class HoofdloopTests(unittest.TestCase):
     def test_fout_profiel_stopt_en_logt_voor_motorinitialisatie(self):
         with tempfile.TemporaryDirectory() as tmp:
             pad = str(Path(tmp) / 'ritlog.jsonl')
-            with patch.object(config, 'KAARTPAD', str(ROBOTKAART)), \
+            # Kopie van de robotkaart waarin COASTER (nog) niet gevalideerd is.
+            data = json.loads(ROBOTKAART.read_text(encoding='utf-8'))
+            for a in data['attracties']:
+                if a['id'] == 'COASTER':
+                    a.update(gevalideerd=False)
+            kaartpad = Path(tmp) / 'kaart.json'
+            kaartpad.write_text(json.dumps(data), encoding='utf-8')
+            with patch.object(config, 'KAARTPAD', str(kaartpad)), \
                  patch.object(config, 'LOKALE_BESTEMMINGEN', ('COASTER',)), \
                  patch.object(config, 'LOG', dict(config.LOG, pad=pad)), \
                  patch.object(robot_main.hardware, 'initialiseer') as init, \

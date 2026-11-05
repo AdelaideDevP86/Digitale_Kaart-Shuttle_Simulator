@@ -1,5 +1,5 @@
 {
-  "versie": "foto-v2-robot-lijneinden-20261104",
+  "versie": "foto-v2-robot-vijf-lijneinden-20261105",
   "profiel": "robot",
   "depot": "D00",
   "start_edge": "E01",
@@ -954,8 +954,8 @@
       "doelknoop": "S01",
       "aankomst_edge": "E18",
       "vertrek_edge": "E18",
-      "herkenning": null,
-      "gevalideerd": false
+      "herkenning": "lijneinde",
+      "gevalideerd": true
     },
     {
       "id": "ARCADE",
@@ -963,8 +963,8 @@
       "doelknoop": "S02",
       "aankomst_edge": "E32",
       "vertrek_edge": "E32",
-      "herkenning": null,
-      "gevalideerd": false
+      "herkenning": "lijneinde",
+      "gevalideerd": true
     },
     {
       "id": "WILDWATER",
@@ -990,16 +990,16 @@
       "doelknoop": "S05",
       "aankomst_edge": "E21",
       "vertrek_edge": "E21",
-      "herkenning": null,
-      "gevalideerd": false
+      "herkenning": "lijneinde",
+      "gevalideerd": true
     }
   ],
   "metadata": {
     "bron": "Door gebruiker aangeleverde bovenaanzichtfoto van het parcours",
-    "status": "Robot-testprofiel: twee lijneinden en depotblok volgens gebruiker; tijden op de baan afstellen",
+    "status": "Robot-testprofiel: vijf lijneinden en depotblok volgens gebruiker; tijden op de baan afstellen",
     "coordinaten": "Schematische tekeneenheden, geen gemeten centimeters of meters",
     "x_richting": "naar rechts",
     "y_richting": "naar beneden",
-    "haltes": "Wildwater S03/E28 en Vrijeval S04/E24; J13/J14 blijven kruispunten, geen haltes"
+    "haltes": "Alle vijf attracties zijn lijneinden (S01-S05) volgens gebruiker; J-knopen blijven kruispunten"
   }
 }

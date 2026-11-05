@@ -224,17 +224,30 @@ class RitBesturing:
                 self._stop("Rijstap begint op een ander punt")
                 return
             self._beweging = stap
-            self._start_beweging = self._actief_ms
+            self._start_beweging = self._draai_start = self._actief_ms
+            self._rechtdoor_aanwezig = self._rechtdoor_bij(stap)
             self._stabiel = None
             actie = stap["actie"]
             self.toestand = "DRAAIEN" if actie in ("links", "rechts", "keren") else "RIJDEN"
             self._fase = "UITLIJNEN" if self.toestand == "DRAAIEN" else "VERLATEN"
             if actie == "keren":
-                self._fase = "WIT"  # Aan een lijneinde eerst vooruit rijden zou de baan verlaten.
+                # Aan een lijneinde eerst een stukje TERUG tot de lijn weer onder de
+                # sensoren ligt: dan staat het draaipunt op de lijn en vindt hij die
+                # na 180 graden altijd terug. Vooruit rijden zou de baan verlaten.
+                self._fase = "TERUG"
             self._trace("uitgang", van=stap["van"], naar=stap["naar"], actie=actie)
             self.positie["op_knoop"] = False
             # Na dit moment mag een routewissel niet meer dit punt gebruiken.
             self._doe_beweging(patroon)
+
+    def _rechtdoor_bij(self, stap):
+        """Ligt er op dit punt fysiek een doorgaande lijn? Ook gesloten edges tellen mee."""
+        kaart, in_edge = self.planner.kaart, self.positie.get("in_edge")
+        if in_edge is None:
+            return False
+        knoop = stap["van"]
+        return any(kaart.beweging(knoop, in_edge, e) == "rechtdoor"
+                   for e in kaart._aansluitingen[knoop] if e != in_edge)
 
     def _doe_beweging(self, p):
         stap, c = self._beweging, self.instellingen
@@ -242,6 +255,15 @@ class RitBesturing:
         if self._actief_ms - self._start_beweging >= c.get("beweging_timeout_ms", 6000):
             self._stop("Uitgang niet gevonden binnen beweging_timeout_ms")
             return
+        if self._fase == "TERUG":
+            if p[1:4] != "000" or self._actief_ms - self._start_beweging >= c.get("terug_max_ms", 800):
+                self._fase = "WIT"
+                self._stabiel = None
+                self._draai_start = self._actief_ms  # minimale keertijd telt vanaf het DRAAIEN
+            else:
+                v = c.get("halte_basis", c["basis"])
+                self._motor(-v, -v)
+                return
         if self._fase == "UITLIJNEN":
             if self._actief_ms - self._start_beweging < c["uitlijnen_ms"]:
                 self._motor(c["basis"], c["basis"])
@@ -251,7 +273,21 @@ class RitBesturing:
         if self._fase in ("WIT", "ZWART"):
             richting = c["keer_richting"] if actie == "keren" else actie
             self._motor(*lijnvolger.draaicommando(richting, c["draaien"]))
-            gewenst = p[2] == ("0" if self._fase == "WIT" else "1")
+            if self._fase == "WIT":
+                if actie in ("links", "rechts") and self._rechtdoor_aanwezig:
+                    # Doorgaande lijn (T of kruising): zwart dat alleen aan de draaikant
+                    # ligt is nog de oude lijn; daar zou hij op terugdraaien.
+                    if richting == "links":
+                        draaikant, overkant = p[0:2], p[3:5]
+                    else:
+                        draaikant, overkant = p[3:5], p[0:2]
+                    gewenst = p[2] == "0" and ("1" not in draaikant or "1" in overkant)
+                else:
+                    # Hoek of geen doorgaande lijn: de oude lijn ligt al achter hem,
+                    # zwart aan de draaikant is de nieuwe lijn. Midden wit is genoeg.
+                    gewenst = p[2] == "0"
+            else:
+                gewenst = p[2] == "1"
             if gewenst:
                 if self._stabiel is None:
                     self._stabiel = self._actief_ms
@@ -259,13 +295,17 @@ class RitBesturing:
                     if self._fase == "WIT":
                         self._fase = "ZWART"
                         self._stabiel = None
-                    elif actie != "keren" or self._actief_ms - self._start_beweging >= c["keer_min_ms"]:
+                    elif actie != "keren" or self._actief_ms - self._draai_start >= c["keer_min_ms"]:
                         self._fase = "VERLATEN"
                         self._stabiel = None
             else:
                 self._stabiel = None
             return
-        self._motor(c["basis"], c["basis"])
+        if p != "00000" and not (p[2] == "1" and (p[0] == "1" or p[4] == "1")):
+            # Naast of op de lijn: bijsturen. Alleen op het kruispunt zelf blind rechtdoor.
+            self._motor(*lijnvolger.volg_lijn(p, self._actief_ms, self._pid, c))
+        else:
+            self._motor(c["basis"], c["basis"])
         if lijnvolger.gewone_lijn(p):
             if self._stabiel is None:
                 self._stabiel = self._actief_ms
@@ -370,6 +410,9 @@ class RitBesturing:
     def _rijden(self, nu_ms, meting):
         p, c = meting["patroon"], self.instellingen
         methode = self._doel_methode()
+        if methode == "lijneinde":
+            # Laatste stuk naar een halte langzamer: minder slingeren en uitrollen.
+            c = dict(c, basis=c.get("halte_basis", c["basis"]))
         if methode == "anker" and meting.get("anker") == self._verwacht:
             self._aankomst({}, p)
             return
@@ -447,7 +490,7 @@ class RitBesturing:
                 self._motor(c["basis"], c["basis"])
         elif p == "00000":
             self._zoeken()
-        elif p[0] == "1" or p[4] == "1":
+        elif p[2] == "1" and (p[0] == "1" or p[4] == "1"):
             self._motor(c["basis"], c["basis"])
         else:
             self._motor(*lijnvolger.volg_lijn(p, self._actief_ms, self._pid, c))

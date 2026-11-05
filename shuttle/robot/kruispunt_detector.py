@@ -36,8 +36,8 @@ class KruispuntDetector:
                 self.vrijgegeven = True
             return None
         self.lijn_sinds_ms = None
-        breed = ((patroon[0] == "1" and "1" in patroon[1:3]) or
-                 (patroon[4] == "1" and "1" in patroon[2:4]))
+        breed = patroon[2] == "1" and (patroon[0] == "1" or patroon[4] == "1")
+
         if not breed or not self.vrijgegeven:
             self.kandidaat_sinds_ms = None
             self._links = self._rechts = False

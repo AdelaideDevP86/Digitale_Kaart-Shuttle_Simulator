@@ -49,6 +49,8 @@ def main():
             besturing.bevestig_start()
         verbind_wifi()
         if config.LOKALE_BESTEMMINGEN:
+            print("Start over", config.START_WACHTTIJD_MS // 1000, "s: zet de robot neer")
+            config.slaap_ms(config.START_WACHTTIJD_MS)
             mqtt.voer_in({"command_id": "lokale-start", "command_seq": 1,
                           "robot_id": mqtt.robot_id, "sessie_id": mqtt.sessie_id,
                           "actie": "start", "mission_id": "lokale-rit", "revisie": 1,
@@ -59,7 +61,7 @@ def main():
             if resultaat["resultaat"] != "accepted":
                 raise ValueError("Lokale rit geweigerd: " + resultaat.get("reden", "onbekend"))
             print("LOKALE ROUTE:", " -> ".join(config.LOKALE_BESTEMMINGEN), "-> DEPOT")
-        print("Robot gereed; kaart:", kaart.versie, "sessie:", mqtt.sessie_id)
+            print("Robot gereed; kaart:", kaart.versie, "sessie:", mqtt.sessie_id)
         while True:
             nu = config.nu_ms()
             meting = hardware.lees_meting()
