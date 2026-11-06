@@ -1,7 +1,7 @@
 """Afstelling uit de eerdere robotcode. Bevestig de hardware op jullie bord."""
 import time
 
-BESTURING_VERSIE = "LIJNHERSTEL_20261105_1"
+BESTURING_VERSIE = "KRUISPUNT_TERUGWEG_20261105_2"
 KAARTPAD = "data/parcours_robot.json"
 HARDWARE_BEVESTIGD = True  # Bestaande pinnen/polariteit uit jullie rijdende robot.
 STARTPOSITIE_BEVESTIGD = True  # Iedere herstart: fysiek in D00, richting J01 zetten.

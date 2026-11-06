@@ -318,5 +318,38 @@ class DepotBinnenkomstTests(unittest.TestCase):
         self.assertEqual(b.toestand, 'KLAAR')
 
 
+    def naar_j01_vanaf_j11(self):
+        p = BaanProef(); self.assertEqual(p.stuur(doelen=['ARCADE'])['resultaat'], 'accepted')
+        for _ in range(3000):
+            b = p.b
+            if (b._verwacht == 'J01' and b._huidige_edge == 'E14'
+                    and b.toestand == 'RIJDEN' and not b._beweging):
+                return p
+            if b.toestand == 'WACHTEN':
+                p.tik('00000', dt=5000)
+            elif b._beweging:
+                p.verlaat()
+            elif b._verwacht and b._doel_methode() == 'lijneinde':
+                p.tik('00000'); p.tik('00000', dt=config.RIJDEN['lijneinde_ms'])
+            elif b._verwacht:
+                p.naar_volgende_knoop()
+            else:
+                p.tik()
+        raise AssertionError('Stuk J11 -> J01 niet bereikt')
+
+    def test_schuin_bij_j01_alleen_rechterarm_gezien(self):
+        # Rit 16:24: de depotarm was al gepasseerd; de detector zag alleen 00111.
+        p = self.naar_j01_vanaf_j11(); b = p.b
+        for patroon, ms in [('00100', 50), ('01110', 50), ('00111', 60), ('00011', 100)]:
+            for _ in range(ms // 5):
+                p.tik(patroon)
+        self.assertNotEqual(b.toestand, 'ZOEKEN', b.reden)
+        self.assertEqual(b.positie['laatste_punt'], 'J01')
+        for patroon, ms in [('00000', 200), ('11000', 100), ('00100', 200), ('11111', 1000)]:
+            for _ in range(ms // 5):
+                p.tik(patroon)
+        self.assertEqual(b.toestand, 'KLAAR')
+
+
 if __name__ == '__main__':
     unittest.main()

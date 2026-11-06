@@ -416,22 +416,39 @@ class RitBesturing:
             else:
                 punt[veld] = None
         methode = self._doel_methode()
+        mogelijk, actie = None, None
         if methode in ("rechtertak", "linkertak"):
             klopt = punt["rechts" if methode == "rechtertak" else "links"]
         else:
             mogelijk = [self.planner.kaart.beweging(self._verwacht, self._huidige_edge, eid)
                         for _, eid in self.planner.kaart.buren(self._verwacht)
                         if eid != self._huidige_edge]
-            actie = self.plan["stappen"][self.stapindex].get("actie")
-            klopt = ((punt["links"] or punt["rechts"])
-                     and not (punt["links"] and "links" not in mogelijk)
-                     and not (punt["rechts"] and "rechts" not in mogelijk)
-                     and (actie not in ("links", "rechts") or punt[actie]))
+            stap = self.plan["stappen"][self.stapindex]
+            actie = stap.get("actie")
+            # Behoud de bestaande uitzondering voor de laatste T naar depot.
+            # Vanaf de steel bevestigt de andere arm daar ook de passage.
+            t_naar_depot = (stap.get("naar") == self.planner.kaart.depot
+                            and "rechtdoor" not in mogelijk
+                            and "links" in mogelijk and "rechts" in mogelijk)
+            # Sensorzijden zijn geen exacte vingerafdruk van de kaartpoorten:
+            # schuin aankomen kan eerst de andere rand en daarna beide tonen.
+            # Vereis positief bewijs voor de geplande uitgang, maar laat een
+            # eerder geziene extra zijde dat bewijs niet blijvend blokkeren.
+            if actie in ("links", "rechts"):
+                klopt = (actie in mogelijk and
+                         (punt[actie] or t_naar_depot and (punt["links"] or punt["rechts"])))
+            else:
+                zijden = [kant for kant in ("links", "rechts") if kant in mogelijk]
+                klopt = (actie == "rechtdoor" and "rechtdoor" in mogelijk
+                         and any(punt[kant] for kant in zijden))
         if klopt:
-            self._trace("punt_bevestigd", patroon=p, links=punt["links"], rechts=punt["rechts"])
+            self._trace("punt_bevestigd", patroon=p, links=punt["links"], rechts=punt["rechts"],
+                        actie=actie, mogelijk=mogelijk)
             self._punt = None
             self._aankomst({}, p)
         elif self._actief_ms - punt["sinds"] >= c.get("kruispunt_timeout_ms", 250):
+            self._trace("punt_afwijking", patroon=p, links=punt["links"], rechts=punt["rechts"],
+                        actie=actie, mogelijk=mogelijk)
             self._punt = None
             self._zoeken("Kruispunt blijft afwijken van geplande uitgang", onzeker=True)
         else:
